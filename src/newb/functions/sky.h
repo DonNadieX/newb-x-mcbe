@@ -4,6 +4,9 @@
 #include "detection.h"
 #include "noise.h"
 
+// CAMBIO: halo suave alrededor del sol y la luna
+#define NL_SKY_HALO 0.45 // 0.2 sutil ~ 1.0 fuerte (comenta esta línea para desactivar)
+
 struct nl_skycolor {
   vec3 zenith;
   vec3 horizon;
@@ -114,6 +117,17 @@ vec3 renderOverworldSky(nl_skycolor skyCol, nl_environment env, vec3 viewDir, bo
     source *= source;
     sky *= 1.0 + 15.0*source*(1.0-env.rainFactor);
   }
+
+  // CAMBIO: halo cálido alrededor del sol (y suave alrededor de la luna)
+  #ifdef NL_SKY_HALO
+    if (!env.underwater) {
+      float sunW = smoothstep(-0.15, 0.15, env.dayFactor);
+      vec3 sunHalo = mix(NL_NOON_SUNLIGHT_COL, NL_DAWN_SUNLIGHT_COL, dawnFactor*dawnFactor);
+      vec3 moonHalo = vec3(0.6, 0.65, 0.75);
+      vec3 halo = (g8.x*g4.x*sunW)*sunHalo + (g8.y*g4.y*(1.0-sunW)*0.5)*moonHalo;
+      sky += (NL_SKY_HALO*mask*(1.0-env.rainFactor))*halo;
+    }
+  #endif
 
   #ifdef NL_RAINBOW
     if (!env.underwater) {
