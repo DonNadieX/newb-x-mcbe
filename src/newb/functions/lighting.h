@@ -7,6 +7,17 @@
 #include "noise.h"
 #include "clouds.h"
 
+// CAMBIO: ajustes rápidos de sombras
+#define NL_AMBIENT_DESAT    0.65 // 0.0 = luz de cielo original (azulada) ~ 1.0 = gris neutro
+#define NL_AMBIENT_STRENGTH 0.55 // fuerza de la luz de relleno: menos = sombras más negras (1.0 = original)
+#define NL_CREVICE_DARKEN   0.65 // oscuridad en rincones/oclusión (original 0.8, menos = más oscuro)
+
+// CAMBIO: luz ambiente del cielo, desaturada y atenuada (quita el tinte azul de las sombras)
+vec3 nlSkyAmbient(nl_skycolor skycol) {
+  vec3 a = skycol.horizon + skycol.zenith;
+  return mix(a, vec3_splat(luminance(a)), NL_AMBIENT_DESAT)*NL_AMBIENT_STRENGTH;
+}
+
 vec3 sunLightTint(float dayFactor, float rain) {
   float nightFactor = step(dayFactor, 0.0);
   float dawnFactor = 1.0-dayFactor*dayFactor;
@@ -95,7 +106,7 @@ vec3 nlLighting(
 
     // sky ambient
     lum = luminance(light);
-    light += (skycol.horizon + skycol.zenith)*(uv1.y/(1.0+lum));
+    light += nlSkyAmbient(skycol)*(uv1.y/(1.0+lum)); // CAMBIO: antes (skycol.horizon + skycol.zenith)
 
   }
 
@@ -110,7 +121,7 @@ vec3 nlLighting(
   }
 
   // darken at crevices
-  light *= COLOR.g > 0.35 ? 1.0 : 0.8;
+  light *= COLOR.g > 0.35 ? 1.0 : NL_CREVICE_DARKEN; // CAMBIO: antes 0.8
 
   // brighten tree leaves
   if (isTree) {
@@ -169,7 +180,7 @@ vec3 nlEntityLighting(nl_skycolor skycol, nl_environment env, vec3 pos, vec4 nor
 
     // sky ambient
     lum = luminance(light);
-    light += (skycol.horizon + skycol.zenith)*(l/(1.0+lum));
+    light += nlSkyAmbient(skycol)*(l/(1.0+lum)); // CAMBIO: antes (skycol.horizon + skycol.zenith)
   }
 
   // torch light
